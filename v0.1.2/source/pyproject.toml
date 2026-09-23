@@ -1,8 +1,0 @@
-[project]
-name = "yastreb-rag"
-version = "0.1.2"
-description = "Offline corporate PDF assistant"
-requires-python = ">=3.10"
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]

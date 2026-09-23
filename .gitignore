@@ -1,0 +1,14 @@
+.venv/
+.tmp/
+__pycache__/
+.pytest_cache/
+data/
+models/
+tools/ollama/
+tools/ollama-windows-amd64.zip
+tools/ollama-sha256sum.txt
+.env
+.streamlit/secrets.toml
+.superpowers/
+*.log
+dist/

@@ -1,0 +1,1 @@
+"""Yastreb local document assistant."""

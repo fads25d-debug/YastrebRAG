@@ -298,7 +298,8 @@ if question := st.chat_input('Введите вопрос по документ�
         st.rerun()
 
 
-@st.fragment(run_every='1s' if active_jobs else None)
+# Numeric seconds avoid importing NumPy/pandas while the answer worker loads models.
+@st.fragment(run_every=1.0 if active_jobs else None)
 def refresh_answers():
     # Compare with the snapshot used to draw this page, including completion races.
     if jobs.active(email) != active_jobs:

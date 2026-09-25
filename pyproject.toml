@@ -1,6 +1,6 @@
 [project]
 name = "yastreb-rag"
-version = "2.0.0"
+version = "2.0.1"
 description = "Offline corporate PDF and Word assistant"
 requires-python = ">=3.10"
 [tool.pytest.ini_options]

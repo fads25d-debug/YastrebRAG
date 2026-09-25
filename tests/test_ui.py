@@ -112,6 +112,62 @@ def test_production_requires_login(tmp_path, monkeypatch):
     assert [t.label for t in app.text_input] == ['Корпоративная почта', 'Пароль']
 
 
+def test_worker_opens_word_source_and_returns_to_chat(tmp_path, monkeypatch):
+    import hashlib
+    from yastreb.accounts import Accounts
+    from yastreb.backend import Backend
+    from test_documents import docx
+    monkeypatch.setenv('YASTREB_DEMO', '0')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    accounts = Accounts(tmp_path / 'accounts/users.sqlite')
+    email = 'reader@local.test'
+    accounts.create_user(email, 'Читатель', 'worker', 'long-password-123')
+    raw = docx('Порядок', 'Подать отчёт до 12 мая.')
+    backend = Backend(tmp_path / 'library', tmp_path / 'model')
+    backend.ingest([('order.docx', raw)], can_manage=True, confirmed=True)
+    chat = accounts.new_chat(email)
+    accounts.append(email, chat, 'assistant', 'Срок: 12 мая. [1]', [{
+        'document_id': hashlib.sha256(raw).hexdigest(), 'source': 'order.docx',
+        'format': 'docx', 'page': 2, 'quote': '12 мая', 'start': 15, 'end': 21}])
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value(email)
+    app.text_input[1].set_value('long-password-123')
+    app.button[0].click().run()
+    next(b for b in app.button if b.label == 'Открыть найденный фрагмент ↗').click().run()
+    assert not app.exception
+    assert app.title[0].value == 'Просмотр документа'
+    assert app.selectbox[0].value == 2
+    assert any('Подать отчёт' in m.value for m in app.markdown)
+    assert app.get('download_button')
+    next(b for b in app.button if b.label == '← Предыдущий').click().run()
+    assert app.selectbox[0].value == 1
+    app.button(key='close_document').click().run()
+    assert len(app.chat_message) == 1
+    assert app.session_state['chat_id'] == chat
+
+
+def test_document_deep_link_requires_login(tmp_path, monkeypatch):
+    monkeypatch.setenv('YASTREB_DEMO', '0')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    app = AppTest.from_file(APP)
+    app.query_params['document'] = 'a' * 64
+    app.run()
+    assert app.title[0].value == 'Ястреб'
+    assert not app.get('download_button')
+
+
+def test_folder_picker_available_only_to_managers(tmp_path, monkeypatch):
+    monkeypatch.setenv('YASTREB_DEMO', '1')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    app = AppTest.from_file(APP).run()
+    next(b for b in app.button if b.label == '⚙').click().run()
+    app.checkbox(key='folder_mode').check().run()
+    assert app.get('file_uploader')[0].proto.accept_directory
+    next(s for s in app.selectbox if s.label == 'Тестовая роль').select('worker').run()
+    app.run()
+    assert not app.get('file_uploader')
+
+
 def test_first_admin_setup_then_login(tmp_path, monkeypatch):
     monkeypatch.setenv('YASTREB_DEMO', '0')
     monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))

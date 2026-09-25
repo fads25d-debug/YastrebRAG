@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def main():
-    missing = [m for m in ['streamlit', 'chromadb', 'sentence_transformers', 'pypdf', 'filelock', 'langchain_text_splitters']
+    missing = [m for m in ['streamlit', 'chromadb', 'sentence_transformers', 'pypdf', 'pypdfium2', 'filelock', 'langchain_text_splitters']
                if importlib.util.find_spec(m) is None]
     root = Path(__file__).resolve().parents[1]
     model_path = Path(os.environ.get('YASTREB_EMBEDDING_PATH', root / 'models' / 'bge-m3'))

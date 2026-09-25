@@ -16,6 +16,7 @@ import streamlit as st
 from yastreb.accounts import Accounts, ROLES
 from yastreb import ui
 from yastreb.runtime import get_backend, get_jobs
+from yastreb.viewer import clear_document_view, location_label, open_source, show_document
 
 st.set_page_config(page_title='Ястреб · документы', page_icon='🦅', layout='wide', initial_sidebar_state='expanded')
 ROOT = Path(__file__).parent
@@ -103,6 +104,7 @@ def toggle_settings():
 with st.sidebar:
     ui.brand()
     if st.button('＋ Новый диалог', width='stretch', key='new_dialog'):
+        clear_document_view()
         st.session_state['chat_id'] = accounts.new_chat(email)
         st.rerun()
     st.caption('Ваши диалоги')
@@ -117,6 +119,7 @@ with st.sidebar:
             if title_col.button(title, key=chat['id'], width='stretch',
                          type='primary' if chat['id'] == st.session_state['chat_id'] else 'secondary'):
                 st.session_state['chat_id'] = chat['id']
+                clear_document_view()
                 st.session_state.pop('delete_chat_id', None)
                 st.rerun()
             if delete_col.button('Удалить диалог', icon=':material/delete:', key='delete_' + chat['id'],
@@ -162,22 +165,35 @@ with st.sidebar:
                     if not DEMO:
                         try:
                             counts = backend().status()
-                            st.caption(f"Сохранено PDF: {counts['documents']} · фрагментов в индексе: {counts['chunks']}")
+                            st.caption(f"Документов: {counts['documents']} · фрагментов в индексе: {counts['chunks']}")
                         except Exception as exc:
                             st.error(str(exc))
-                    files = st.file_uploader('PDF-документы', type=['pdf'], accept_multiple_files=True)
+                    folder_mode = st.checkbox('Выбрать папку целиком', key='folder_mode')
+                    files = st.file_uploader('Папка с документами' if folder_mode else 'PDF и Word-документы',
+                                             type=['pdf', 'docx', 'doc'],
+                                             accept_multiple_files='directory' if folder_mode else True,
+                                             key='folder_upload' if folder_mode else 'document_upload')
+                    st.caption('Вложенные папки включаются. До 1000 файлов / 500 МиБ за раз; один файл — до 50 МиБ. '
+                               'DOCX читается напрямую, для старых DOC нужен LibreOffice на сервере.')
                     confirmed = st.checkbox('Подтверждаю добавление файлов')
-                    if st.button('Добавить PDF', disabled=not (confirmed and files), width='stretch'):
+                    if st.button('Добавить и проиндексировать', disabled=not (confirmed and files), width='stretch'):
                         if DEMO:
                             st.info('Демонстрация: файлы не сохраняются. Для индексации запустите рабочий режим.')
                         else:
                             try:
                                 with st.spinner('Извлекаю текст и строю индекс…'):
-                                    result = backend().ingest([(f.name, f.getvalue()) for f in files],
-                                                              can_manage=accounts.can_manage(email), confirmed=confirmed)
-                                    backend().rebuild(can_manage=accounts.can_manage(email))
-                                st.success('Индексация завершена.')
-                                st.json(result)
+                                    if len(files) > 1000 or sum(f.size for f in files) > 500 * 1024 * 1024:
+                                        raise ValueError('Превышен лимит: 1000 файлов или 500 МиБ.')
+                                    result = backend().ingest_folder([(f.name, f.getvalue()) for f in files],
+                                                                     can_manage=accounts.can_manage(email), confirmed=confirmed)
+                                    if result['added'] or result['duplicates']:
+                                        backend().rebuild(can_manage=accounts.can_manage(email))
+                                        st.success('Индексация завершена.')
+                                    else:
+                                        st.warning('Подходящие документы не добавлены.')
+                                st.caption(f"Добавлено: {result['added']} · Дубликатов: {result['duplicates']} · Пропущено: {result['skipped']}")
+                                for error in result['errors']:
+                                    st.text(error['file'] + ': ' + error['error'])
                             except Exception as exc:
                                 st.error(str(exc))
                                 st.caption('Если файлы уже сохранены, повторите переиндексацию после устранения ошибки. Прежний индекс остаётся рабочим.')
@@ -208,6 +224,16 @@ with st.sidebar:
             ui.account(user['name'], ROLES[user['role']])
         with gear_col:
             st.button('⚙', help='Настройки', on_click=toggle_settings)
+
+if st.query_params.get('document'):
+    if DEMO:
+        st.info('В деморежиме оригиналы документов недоступны.')
+        if st.button('Вернуться к демонстрации'):
+            st.query_params.clear()
+            st.rerun()
+    else:
+        show_document(backend())
+    st.stop()
 
 st.markdown('<div class="workspace-bar"><span class="workspace-label">Библиотека знаний</span>'
             '<span class="local-badge"><i></i>Локальная обработка</span></div>', unsafe_allow_html=True)
@@ -246,8 +272,16 @@ for message in messages:
         if message['sources']:
             st.caption('Источники ответа')
         for i, source in enumerate(message['sources'], 1):
-            with st.expander(f"[{i}] {source['source']} · стр. {source['page']}"):
+            with st.expander(f"[{i}] {source['source']} · {location_label(source)}"):
                 st.text(source['quote'])
+                if not DEMO:
+                    digest = backend().resolve_source(source)
+                    if digest:
+                        st.button('Открыть найденный фрагмент ↗', type='tertiary',
+                                  key=f"open_source_{message['id']}_{i}",
+                                  on_click=open_source, args=(digest, source))
+                    else:
+                        st.caption('Оригинал не найден или имя неоднозначно. Повторите поиск после переиндексации.')
 
 if chat_id in active_jobs:
     st.info('Ищу в документах и готовлю ответ… Можно перейти в другой диалог.'

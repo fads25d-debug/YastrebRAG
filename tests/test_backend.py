@@ -173,6 +173,20 @@ class BackendTests(unittest.TestCase):
             state.handlers[1].redirect_request(None, None, 302, '', {}, 'http://example.com')
         self.assertEqual(state.payload['messages'][0]['role'], 'system')
 
+    def test_word_is_indexed_and_citation_opens_matching_paragraph(self):
+        from test_documents import docx
+        state = self.boundaries()
+        raw = docx('Evidence says blue.', 'Twelve days.')
+        self.backend.ingest_folder([('Faculty/orders.docx', raw)], can_manage=True, confirmed=True)
+        self.backend.rebuild(can_manage=True)
+        answer = self.backend.answer('What color?')
+        source = answer['sources'][0]
+        self.assertEqual(source['format'], 'docx')
+        document = self.backend.document(source['document_id'])
+        paragraph = dict(document['units'])[source['page']]
+        self.assertEqual(paragraph[source['start']:source['end']], source['quote'])
+        self.assertEqual(document['source'], 'Faculty/orders.docx')
+
     def test_rejects_unverifiable_sources(self):
         state = self.indexed(1)
         for citations in ([], [{'id': 1, 'quote': 'made up'}], [{'id': 3, 'quote': 'blue'}],

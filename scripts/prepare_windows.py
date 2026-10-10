@@ -106,6 +106,8 @@ def main():
     os.environ['HF_HUB_OFFLINE'] = '1' if args.offline else '0'
     os.environ['TRANSFORMERS_OFFLINE'] = '1' if args.offline else '0'
     os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
+    # Standard HTTPS works on restrictive corporate networks without the Xet client.
+    os.environ.setdefault('HF_HUB_DISABLE_XET', '1')
     os.environ['ANONYMIZED_TELEMETRY'] = 'False'
     os.environ.setdefault('YASTREB_NUM_GPU', '0')
     root = Path(__file__).resolve().parents[1]
@@ -123,3 +125,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

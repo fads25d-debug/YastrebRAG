@@ -12,3 +12,7 @@ tools/ollama-sha256sum.txt
 .superpowers/
 *.log
 dist/
+downloads/
+tools/windows/
+tools/ollama-stage-*/
+tools/ollama-backup-*/

@@ -50,7 +50,8 @@ def main():
     os.environ['LANGCHAIN_TRACING_V2'] = 'false'
     os.environ.setdefault('YASTREB_NUM_GPU', '0')
     root = Path(__file__).resolve().parents[1]
-    backend = Backend(root / 'data' / 'smoke', root / 'models' / 'bge-m3')
+    backend = Backend(root / 'data' / 'smoke', root / 'models' / 'bge-m3',
+                      os.environ.get('YASTREB_OLLAMA_URL', 'http://127.0.0.1:11435' if os.name == 'nt' else 'http://127.0.0.1:11434'))
     print('Preparing isolated synthetic PDF...', flush=True)
     backend.ingest([('synthetic-test.pdf', sample_pdf())], can_manage=True, confirmed=True)
     print('Index:', backend.rebuild(can_manage=True), flush=True)

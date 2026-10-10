@@ -13,7 +13,13 @@ def main():
     model_path = Path(os.environ.get('YASTREB_EMBEDDING_PATH', root / 'models' / 'bge-m3'))
     print('Missing packages:', ', '.join(missing) or 'none')
     print('Embedding directory:', model_path, 'exists:', model_path.is_dir())
-    url = os.environ.get('YASTREB_OLLAMA_URL', 'http://127.0.0.1:11434')
+    required = ['config.json', 'modules.json', 'tokenizer_config.json', '1_Pooling/config.json']
+    incomplete = [name for name in required if not (model_path / name).is_file()]
+    weights = any((model_path / name).is_file() and (model_path / name).stat().st_size > 0
+                  for name in ('pytorch_model.bin', 'model.safetensors'))
+    tokenizer = any((model_path / name).is_file() for name in ('tokenizer.json', 'sentencepiece.bpe.model'))
+    print('Embedding files:', 'OK' if not incomplete and weights and tokenizer else 'INCOMPLETE; run install.cmd')
+    url = os.environ.get('YASTREB_OLLAMA_URL', 'http://127.0.0.1:11435' if os.name == 'nt' else 'http://127.0.0.1:11434')
     from yastreb.backend import Backend, _NoRedirect
     # Reuse backend URL validation before any request.
     Backend(root / 'data' / 'library', model_path, url)
@@ -27,7 +33,7 @@ def main():
     except Exception as error:
         print('Ollama not ready:', error)
         ready = False
-    return 0 if not missing and model_path.is_dir() and ready else 1
+    return 0 if not missing and not incomplete and weights and tokenizer and ready else 1
 
 
 if __name__ == '__main__':

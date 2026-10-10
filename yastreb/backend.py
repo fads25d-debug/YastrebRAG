@@ -9,6 +9,7 @@ import hashlib
 import io
 import ipaddress
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -245,7 +246,7 @@ class Backend:
         files = []
         if root.is_dir():
             for path in sorted(root.rglob('*')):
-                if path.is_file():
+                if path.is_file() and '.cache' not in path.relative_to(root).parts:
                     stat = path.stat()
                     config_hash = hashlib.sha256(path.read_bytes()).hexdigest() if path.suffix == '.json' else None
                     files.append((path.relative_to(root).as_posix(), stat.st_size, stat.st_mtime_ns, config_hash))
@@ -263,6 +264,7 @@ class Backend:
                 raise BackendError('Каталог локальной модели эмбеддингов отсутствует')
             from sentence_transformers import SentenceTransformer
             self._encoder = SentenceTransformer(str(self.embedding_path.resolve()),
+                                               device=os.environ.get('YASTREB_EMBEDDING_DEVICE', 'cpu'),
                                                local_files_only=True, trust_remote_code=False)
             self._encoder_signature = signature
         return self._encoder.encode(texts, normalize_embeddings=True).tolist()
@@ -316,7 +318,10 @@ class Backend:
             except BackendError:
                 raise
             except Exception as exc:
-                raise BackendError('Переиндексация не выполнена; предыдущий индекс остаётся активным') from exc
+                logging.getLogger(__name__).exception('Index rebuild failed')
+                raise BackendError('Переиндексация не выполнена; предыдущий индекс остаётся активным. '
+                                   'Проверьте установку моделей (install.cmd на Windows). '
+                                   f'Тип ошибки: {type(exc).__name__}. Подробности в журнале сервера.') from exc
 
     def _generate(self, question, context, mode):
         instructions = {

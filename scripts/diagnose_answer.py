@@ -14,7 +14,8 @@ def main():
     args = parser.parse_args()
     os.environ.setdefault('YASTREB_NUM_GPU', '0')
     root = Path(__file__).resolve().parents[1]
-    backend = Backend(root / 'data/library', root / 'models/bge-m3')
+    backend = Backend(root / 'data/library', root / 'models/bge-m3',
+                      os.environ.get('YASTREB_OLLAMA_URL', 'http://127.0.0.1:11435' if os.name == 'nt' else 'http://127.0.0.1:11434'))
     report = {'question': args.question}
     destination = root / 'data/diagnostics/last-answer.json'
     destination.parent.mkdir(parents=True, exist_ok=True)

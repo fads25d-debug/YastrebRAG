@@ -165,7 +165,7 @@ class BackendTests(unittest.TestCase):
             self.assertIn('краткий' if mode == 'quick' else 'развёрнутый', state.payload['messages'][0]['content'])
             self.assertEqual(json.loads(state.payload['messages'][1]['content'])['question'], 'What color?')
         self.assertEqual(state.ks, [3, 8])
-        self.assertEqual(state.embedding_options, {'local_files_only': True, 'trust_remote_code': False})
+        self.assertEqual(state.embedding_options, {'device': 'cpu', 'local_files_only': True, 'trust_remote_code': False})
         self.assertEqual(state.split_settings, (1000, 200))
         self.assertEqual(state.handlers[0].proxies, {})
         self.assertEqual(state.timeout, 300)

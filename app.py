@@ -36,10 +36,12 @@ if DEMO:
     st.session_state['email'] = email
 else:
     setup_email = os.environ.get('YASTREB_SETUP_EMAIL', '')
-    if setup_email and accounts.is_empty() and st.get_option('server.address') == '127.0.0.1':
+    if (setup_email or os.environ.get('YASTREB_SETUP') == '1') and accounts.is_empty() and st.get_option('server.address') == '127.0.0.1':
         st.title('Первый запуск «Ястреб»')
         st.info('Создайте локальную учётную запись администратора: ' + setup_email)
         with st.form('first_admin'):
+            if not setup_email:
+                setup_email = st.text_input('Корпоративная почта', placeholder='name@company.local')
             setup_name = st.text_input('Ваше имя', value=setup_email.split('@')[0])
             setup_password = st.text_input('Новый пароль (не менее 12 символов)', type='password')
             setup_repeat = st.text_input('Повторите пароль', type='password')

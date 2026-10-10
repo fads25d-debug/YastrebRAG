@@ -6,8 +6,9 @@ import pytest
 
 
 @pytest.mark.skipif(not shutil.which('powershell.exe'), reason='Windows only')
-def test_launcher_parses_in_windows_powershell():
-    script = Path(__file__).resolve().parents[1] / 'start.ps1'
+@pytest.mark.parametrize('name', ['start.ps1', 'install-windows.ps1', 'scripts/windows-install.ps1'])
+def test_launcher_parses_in_windows_powershell(name):
+    script = Path(__file__).resolve().parents[1] / name
     command = (
         "$tokens=$null; $errors=$null; "
         f"[System.Management.Automation.Language.Parser]::ParseFile('{script}', "

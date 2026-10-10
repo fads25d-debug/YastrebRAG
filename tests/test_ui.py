@@ -183,3 +183,34 @@ def test_first_admin_setup_then_login(tmp_path, monkeypatch):
     app.text_input[1].set_value('long-password-123')
     app.button[0].click().run()
     assert len(app.chat_input) == 1
+
+
+def test_installer_offers_admin_without_preconfigured_email(tmp_path, monkeypatch):
+    from yastreb.accounts import Accounts
+    monkeypatch.setenv('YASTREB_DEMO', '0')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    monkeypatch.setenv('YASTREB_SETUP', '1')
+    monkeypatch.delenv('YASTREB_SETUP_EMAIL', raising=False)
+    app = AppTest.from_file(APP).run()
+    assert app.title[0].value == 'Первый запуск «Ястреб»'
+    fields = {field.label: field for field in app.text_input}
+    fields['Корпоративная почта'].set_value('first@local.test')
+    fields['Ваше имя'].set_value('Администратор')
+    fields['Новый пароль (не менее 12 символов)'].set_value('long-password-123')
+    fields['Повторите пароль'].set_value('long-password-123')
+    app.button[0].click().run()
+    assert not app.exception
+    assert Accounts(tmp_path / 'accounts/users.sqlite').user('first@local.test')['role'] == 'admin'
+    assert app.title[0].value == 'Ястреб'
+
+
+def test_admin_setup_is_not_exposed_on_network_bind(tmp_path, monkeypatch):
+    import streamlit as st
+    monkeypatch.setenv('YASTREB_DEMO', '0')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    monkeypatch.setenv('YASTREB_SETUP', '1')
+    original = st.get_option
+    monkeypatch.setattr(st, 'get_option', lambda key: '0.0.0.0' if key == 'server.address' else original(key))
+    app = AppTest.from_file(APP).run()
+    assert app.title[0].value == 'Ястреб'
+    assert not any(button.label == 'Создать администратора' for button in app.button)

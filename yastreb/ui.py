@@ -32,7 +32,7 @@ def apply_theme(theme='Синяя', large=False):
 html,body,[data-testid="stApp"],button,input,textarea,select {{font-family:"Segoe UI Variable","Segoe UI","DejaVu Sans",sans-serif;}}
 [data-testid="stMarkdownContainer"],.stApp label,.stApp [data-testid="stText"] {{color:var(--ink);}}
 [data-testid="stCaptionContainer"] p {{color:var(--muted)!important;font-size:12px;line-height:1.65;}}
-.stMainBlockContainer {{max-width:1030px;padding:2.4rem 3rem 2rem;}}
+.stMainBlockContainer {{max-width:1060px;padding:2.8rem 3.5rem 2rem;}}
 h1,h2,h3 {{color:var(--ink);font-family:inherit;}}
 h1 {{font-size:clamp(29px,3.1vw,42px)!important;font-weight:600!important;letter-spacing:-1.5px;line-height:1.18!important;padding:0!important;}}
 h2,h3 {{letter-spacing:-.45px;}}
@@ -44,6 +44,8 @@ h2,h3 {{letter-spacing:-.45px;}}
 .stApp button[kind="secondary"] {{background:var(--surface);border:1px solid var(--line);color:var(--ink);}}
 .stApp button[kind="secondary"]:hover {{border-color:var(--accent);color:var(--accent);}}
 .stApp button[kind="primary"] {{background:var(--accent);border:1px solid var(--accent);color:{'#132738' if theme == 'Тёмная' else '#ffffff'};}}
+[data-testid="stMain"] button[kind="primary"] [data-testid="stMarkdownContainer"],[data-testid="stMain"] button[kind="primary"] p {{color:{'#132738' if theme == 'Тёмная' else '#ffffff'}!important;}}
+.stApp [data-testid="stCaptionContainer"],.stApp [data-testid="stCaptionContainer"] p {{color:var(--muted)!important;}}
 .stApp [data-baseweb="input"],.stApp [data-baseweb="select"]>div {{background:var(--surface);border-color:var(--line);color:var(--ink);border-radius:8px;}}
 [data-testid="stSelectbox"] [role="group"],[data-testid="stTextInput"] input {{background:var(--surface);border-color:var(--line);color:var(--ink);border-radius:8px;}}
 [data-testid="stSelectbox"] button {{color:var(--ink);}}
@@ -53,6 +55,7 @@ h2,h3 {{letter-spacing:-.45px;}}
 .stApp input,.stApp textarea {{color:var(--ink)!important;caret-color:var(--accent);}}
 .stApp input::placeholder,.stApp textarea::placeholder {{color:var(--muted)!important;opacity:1;}}
 [data-testid="stSidebar"] {{background:var(--side);color:var(--side-ink);min-width:294px;max-width:310px;border-right:1px solid var(--line);}}
+[data-testid="stSidebar"][aria-expanded="false"] {{min-width:0;}}
 [data-testid="stSidebarUserContent"] {{position:relative;min-height:calc(100dvh - 6rem);padding:0 22px 108px!important;}}
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"], [data-testid="stSidebar"] [data-testid="stText"] {{color:var(--side-ink);}}
 [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {{color:var(--side-muted)!important;}}
@@ -88,16 +91,19 @@ h2,h3 {{letter-spacing:-.45px;}}
 .account-identity strong {{display:block;color:var(--side-ink);font-size:13px;font-weight:550;overflow:hidden;text-overflow:ellipsis;}}
 .account-identity span:not(.account-avatar) {{display:block;color:var(--side-muted);font-size:11px;margin-top:3px;}}
 .st-key-account button {{background:transparent!important;color:var(--side-ink)!important;border:0!important;min-height:36px;font-size:21px;}}
-.st-key-settings {{position:absolute;bottom:88px;left:0;right:0;width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:14px;z-index:40;box-shadow:0 -12px 40px #00102130;max-height:calc(100dvh - 160px);overflow:auto;}}
-[data-testid="stSidebar"] .st-key-settings [data-testid="stMarkdownContainer"], [data-testid="stSidebar"] .st-key-settings [data-testid="stText"], .st-key-settings label {{color:var(--ink);}}
-[data-testid="stSidebar"] .st-key-settings [data-testid="stCaptionContainer"] p {{color:var(--muted)!important;}}
-.st-key-settings [data-baseweb="tab-list"] {{gap:13px;}}
-.st-key-settings button[data-baseweb="tab"] {{font-size:11px;padding-left:0;padding-right:0;color:var(--muted);}}
-.st-key-settings [role="tab"] {{font-size:11px;padding-left:0;padding-right:0;color:var(--muted);}}
-.st-key-settings [role="tab"] p {{font-size:11px!important;white-space:nowrap;}}
-.st-key-settings [role="tablist"] {{gap:8px;}}
-.st-key-settings button[data-baseweb="tab"][aria-selected="true"] {{color:var(--accent);}}
-.st-key-settings [data-testid="stFileUploaderDropzone"] {{background:var(--bg);padding:12px;}}
+.st-key-settings {{max-width:780px;margin:0 auto;padding-bottom:48px;}}
+.st-key-settings h1 {{margin-top:20px!important;}}
+.st-key-settings h3 {{font-size:22px!important;font-weight:600;line-height:1.4;}}
+.st-key-settings [role="tablist"] {{gap:28px;border-bottom:1px solid var(--line);margin:24px 0 30px;overflow-x:auto;}}
+.st-key-settings [role="tab"] {{padding:12px 0;color:var(--muted);}}
+.st-key-settings [role="tab"] p {{font-size:15px!important;white-space:nowrap;}}
+.st-key-settings [role="tab"][aria-selected="true"] {{color:var(--accent);font-weight:600;}}
+.st-key-settings [role="tabpanel"] {{padding-top:8px;}}
+.st-key-settings [data-testid="stSelectbox"] {{max-width:470px;margin:6px 0 12px;}}
+.st-key-settings [data-testid="stFileUploaderDropzone"] {{background:var(--surface);border:1px dashed var(--accent);border-radius:12px;padding:26px;}}
+.st-key-settings [data-testid="stButton"] button {{min-height:42px;}}
+.st-key-back_to_chat button {{background:transparent!important;border-color:transparent!important;padding-left:0;}}
+.st-key-settings [data-testid="stCheckbox"] {{margin:8px 0;}}
 .workspace-bar {{display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:30px;font-size:12px;color:var(--muted);}}
 .workspace-label {{font-weight:550;color:var(--ink);}}
 .local-badge {{display:flex;align-items:center;gap:7px;white-space:nowrap;}}
@@ -118,7 +124,7 @@ h2,h3 {{letter-spacing:-.45px;}}
 .question-example {{border-left:2px solid var(--line);padding-left:15px;}}
 .question-example strong {{font-size:13px;font-weight:600;color:var(--ink);}}
 .question-example p {{font-size:12px;line-height:1.7;color:var(--muted);margin:8px 0;}}
-[data-testid="stChatMessage"] {{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 24px;gap:15px;margin:8px 0;}}
+[data-testid="stChatMessage"] {{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:26px 28px;gap:18px;margin:12px 0;}}
 [data-testid="stChatMessage"]:has([aria-label="Chat message from user"]) {{background:transparent;border-color:transparent;padding:12px 24px;}}
 [data-testid="stChatMessageAvatarCustom"] {{background:var(--line);border-radius:9px;}}
 [data-testid="stChatMessageAvatarCustom"] span {{color:var(--ink)!important;}}
@@ -129,16 +135,16 @@ h2,h3 {{letter-spacing:-.45px;}}
 [data-testid="stChatMessageContent"] [data-testid="stCaptionContainer"] p {{font-size:11px;color:var(--muted);}}
 [data-testid="stChatMessageContent"] [data-testid="stExpander"] {{background:var(--bg);border:1px solid var(--line);border-radius:9px;}}
 [data-testid="stExpander"] summary {{padding:12px 14px;color:var(--ink);}}
-[data-testid="stExpander"] summary p {{font-size:12px!important;line-height:1.5!important;}}
+[data-testid="stExpander"] summary p {{font-size:13px!important;line-height:1.6!important;}}
 [data-testid="stExpanderDetails"] [data-testid="stText"] {{font-size:13px;line-height:1.8;color:var(--muted);white-space:pre-wrap;}}
-[data-testid="stExpanderDetails"] [data-testid="stText"] span {{font-size:13px;color:var(--muted);}}
+[data-testid="stExpanderDetails"] [data-testid="stText"] span {{font-size:14px;color:var(--ink);border-left:2px solid var(--accent);padding-left:14px;}}
 [data-testid="stChatInput"] {{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 26px #122d4510;}}
 [data-testid="stChatInput"]>div {{background:var(--surface)!important;border-radius:inherit;}}
 [data-testid="stChatInputSubmitButton"]:not(:disabled) {{background:var(--accent);color:{'#132738' if theme == 'Тёмная' else '#ffffff'};}}
 [data-testid="stChatInput"]:focus-within {{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent);}}
 [data-testid="stChatInput"] textarea {{background:transparent;font-size:15px;padding:15px 17px;}}
 [data-testid="stChatInput"] textarea:focus-visible {{outline:none!important;}}
-[data-testid="stBottomBlockContainer"] {{max-width:1030px;padding:14px 3rem 22px;}}
+[data-testid="stBottomBlockContainer"] {{max-width:1060px;padding:14px 3.5rem 22px;}}
 .st-key-login,.st-key-setup {{max-width:460px;margin:7vh auto 0;}}
 .st-key-login .brand {{--side-ink:var(--accent);--side-muted:var(--muted);--brand-cut:var(--bg);padding-bottom:30px;}}
 .st-key-login .brand>div {{display:none;}}
@@ -146,6 +152,6 @@ h2,h3 {{letter-spacing:-.45px;}}
 .st-key-login [data-testid="stForm"] {{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:27px;margin:20px 0 8px;box-shadow:0 12px 50px #10283e07;}}
 .st-key-login [data-testid="stFormSubmitButton"] button {{width:100%;background:var(--accent);color:white;border:0;min-height:43px;margin-top:10px;}}
 .st-key-login [data-testid="stFormSubmitButton"] button p {{color:white!important;}}
-@media(max-width:760px) {{.stMainBlockContainer {{padding:1.5rem 1.2rem 1rem;}}[data-testid="stBottomBlockContainer"] {{padding:12px 1rem 18px;}}.question-examples {{grid-template-columns:1fr;gap:14px;}}.workspace-bar {{font-size:11px;margin-bottom:22px;}}h1 {{letter-spacing:-.8px;}}[data-testid="stChatMessage"] {{padding:17px 13px;gap:9px;}}.st-key-login {{margin-top:4vh;}}}}
+@media(max-width:760px) {{.stMainBlockContainer {{padding:1.5rem 1.2rem 1rem;}}[data-testid="stBottomBlockContainer"] {{padding:12px 1rem 18px;}}.question-examples {{grid-template-columns:1fr;gap:14px;}}.workspace-bar {{font-size:11px;margin-bottom:22px;}}h1 {{letter-spacing:-.8px;}}[data-testid="stChatMessage"] {{padding:17px 13px;gap:9px;}}.st-key-login {{margin-top:4vh;}}.st-key-settings [role="tablist"] {{gap:18px;}}.st-key-settings [data-testid="stFileUploaderDropzone"] {{padding:16px;}}}}
 @media(prefers-reduced-motion:reduce) {{*,*::before,*::after {{transition:none!important;animation:none!important;scroll-behavior:auto!important;}}}}
 </style>''', unsafe_allow_html=True)

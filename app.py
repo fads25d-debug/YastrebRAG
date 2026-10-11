@@ -99,13 +99,19 @@ jobs = get_jobs(str(accounts.path.resolve()), *backend_config, DEMO)
 active_jobs = jobs.active(email)
 
 
+def show_chat():
+    st.session_state['settings_open'] = False
+
+
 def toggle_settings():
-    st.session_state['settings_open'] = not st.session_state.get('settings_open', False)
+    clear_document_view()
+    st.session_state['settings_open'] = True
 
 
 with st.sidebar:
     ui.brand()
     if st.button('＋ Новый диалог', width='stretch', key='new_dialog'):
+        show_chat()
         clear_document_view()
         st.session_state['chat_id'] = accounts.new_chat(email)
         st.rerun()
@@ -120,6 +126,7 @@ with st.sidebar:
             title = ('⏳ ' if chat['id'] in active_jobs else '') + chat['title']
             if title_col.button(title, key=chat['id'], width='stretch',
                          type='primary' if chat['id'] == st.session_state['chat_id'] else 'secondary'):
+                show_chat()
                 st.session_state['chat_id'] = chat['id']
                 clear_document_view()
                 st.session_state.pop('delete_chat_id', None)
@@ -148,84 +155,92 @@ with st.sidebar:
                 st.rerun()
     else:
         st.session_state.pop('delete_chat_id', None)
-    if st.session_state.get('settings_open'):
-        with st.container(key='settings'):
-            st.markdown('**Настройки**')
-            allowed = accounts.can_manage(email)
-            labels = ['Внешний вид'] + (['Внести изменения'] if allowed else []) + ['Профиль']
-            tabs = st.tabs(labels)
-            with tabs[0]:
-                new_theme = st.selectbox('Цветовая тема', ['Синяя', 'Светлая', 'Тёмная'],
-                                         index=['Синяя', 'Светлая', 'Тёмная'].index(theme))
-                size = st.selectbox('Размер текста', ['Обычный', 'Крупный'], index=1 if prefs.get('size') == 'Крупный' else 0)
-                if st.button('Применить', width='stretch'):
-                    accounts.preferences(email, {'theme': new_theme, 'size': size})
-                    st.rerun()
-            if allowed:
-                with tabs[1]:
-                    st.caption('Добавление документов в общую библиотеку')
-                    if not DEMO:
-                        try:
-                            counts = backend().status()
-                            st.caption(f"Документов: {counts['documents']} · фрагментов в индексе: {counts['chunks']}")
-                        except Exception as exc:
-                            st.error(str(exc))
-                    folder_mode = st.checkbox('Выбрать папку целиком', key='folder_mode')
-                    files = st.file_uploader('Папка с документами' if folder_mode else 'PDF и Word-документы',
-                                             type=['pdf', 'docx', 'doc'],
-                                             accept_multiple_files='directory' if folder_mode else True,
-                                             key='folder_upload' if folder_mode else 'document_upload')
-                    st.caption('Вложенные папки включаются. До 1000 файлов / 500 МиБ за раз; один файл — до 50 МиБ. '
-                               'DOCX читается напрямую, для старых DOC нужен LibreOffice на сервере.')
-                    confirmed = st.checkbox('Подтверждаю добавление файлов')
-                    if st.button('Добавить и проиндексировать', disabled=not (confirmed and files), width='stretch'):
-                        if DEMO:
-                            st.info('Демонстрация: файлы не сохраняются. Для индексации запустите рабочий режим.')
-                        else:
-                            try:
-                                with st.spinner('Извлекаю текст и строю индекс…'):
-                                    if len(files) > 1000 or sum(f.size for f in files) > 500 * 1024 * 1024:
-                                        raise ValueError('Превышен лимит: 1000 файлов или 500 МиБ.')
-                                    result = backend().ingest_folder([(f.name, f.getvalue()) for f in files],
-                                                                     can_manage=accounts.can_manage(email), confirmed=confirmed)
-                                    if result['added'] or result['duplicates']:
-                                        backend().rebuild(can_manage=accounts.can_manage(email))
-                                        st.success('Индексация завершена.')
-                                    else:
-                                        st.warning('Подходящие документы не добавлены.')
-                                st.caption(f"Добавлено: {result['added']} · Дубликатов: {result['duplicates']} · Пропущено: {result['skipped']}")
-                                for error in result['errors']:
-                                    st.text(error['file'] + ': ' + error['error'])
-                            except Exception as exc:
-                                st.error(str(exc))
-                                st.caption('Если файлы уже сохранены, повторите переиндексацию после устранения ошибки. Прежний индекс остаётся рабочим.')
-                    rebuild_confirm = st.checkbox('Подтверждаю перестроение индекса')
-                    if st.button('Переиндексировать', disabled=not rebuild_confirm, width='stretch'):
-                        if DEMO:
-                            st.info('Демонстрация: индекс не изменён.')
-                        else:
-                            try:
-                                with st.spinner('Перестраиваю индекс…'):
-                                    backend().rebuild(can_manage=accounts.can_manage(email))
-                                st.success('Индекс обновлён.')
-                            except Exception as exc:
-                                st.error(str(exc))
-            with tabs[-1]:
-                st.write(user['name'])
-                st.caption(email)
-                st.write(ROLES[user['role']])
-                if DEMO:
-                    st.selectbox('Тестовая роль', list(ROLES), format_func=ROLES.get, key='demo_role',
-                                 index=list(ROLES).index(user['role']))
-                elif st.button('Выйти', width='stretch'):
-                    st.session_state.clear()
-                    st.rerun()
     with st.container(key='account'):
         name_col, gear_col = st.columns([4, 1])
         with name_col:
             ui.account(user['name'], ROLES[user['role']])
         with gear_col:
             st.button('⚙', help='Настройки', on_click=toggle_settings)
+
+if st.session_state.get('settings_open'):
+    with st.container(key='settings'):
+        st.button('Вернуться к диалогу', icon=':material/arrow_back:', key='back_to_chat', on_click=show_chat)
+        st.title('Настройки')
+        st.caption('Оформление рабочего пространства, документы и ваша учётная запись.')
+        allowed = accounts.can_manage(email)
+        labels = ['Внешний вид'] + (['Внести изменения'] if allowed else []) + ['Профиль']
+        tabs = st.tabs(labels)
+        with tabs[0]:
+            st.subheader('Удобно читать. Легко сосредоточиться.')
+            st.caption('Эти настройки сохраняются только для вашей учётной записи.')
+            new_theme = st.selectbox('Цветовая тема', ['Синяя', 'Светлая', 'Тёмная'],
+                                     index=['Синяя', 'Светлая', 'Тёмная'].index(theme))
+            size = st.selectbox('Размер текста', ['Обычный', 'Крупный'], index=1 if prefs.get('size') == 'Крупный' else 0)
+            if st.button('Применить', type='primary'):
+                accounts.preferences(email, {'theme': new_theme, 'size': size})
+                st.rerun()
+        if allowed:
+            with tabs[1]:
+                st.subheader('Библиотека документов')
+                st.caption('Добавляйте файлы или папки. После индексации они станут доступны для поиска.')
+                if not DEMO:
+                    try:
+                        counts = backend().status()
+                        st.caption(f"Документов: {counts['documents']} · фрагментов в индексе: {counts['chunks']}")
+                    except Exception as exc:
+                        st.error(str(exc))
+                folder_mode = st.checkbox('Выбрать папку целиком', key='folder_mode')
+                files = st.file_uploader('Папка с документами' if folder_mode else 'PDF и Word-документы',
+                                         type=['pdf', 'docx', 'doc'],
+                                         accept_multiple_files='directory' if folder_mode else True,
+                                         key='folder_upload' if folder_mode else 'document_upload')
+                st.caption('Вложенные папки включаются. До 1000 файлов / 500 МиБ за раз; один файл — до 50 МиБ. '
+                           'DOCX читается напрямую, для старых DOC нужен LibreOffice на сервере.')
+                confirmed = st.checkbox('Подтверждаю добавление файлов')
+                if st.button('Добавить и проиндексировать', disabled=not (confirmed and files), width='stretch'):
+                    if DEMO:
+                        st.info('Демонстрация: файлы не сохраняются. Для индексации запустите рабочий режим.')
+                    else:
+                        try:
+                            with st.spinner('Извлекаю текст и строю индекс…'):
+                                if len(files) > 1000 or sum(f.size for f in files) > 500 * 1024 * 1024:
+                                    raise ValueError('Превышен лимит: 1000 файлов или 500 МиБ.')
+                                result = backend().ingest_folder([(f.name, f.getvalue()) for f in files],
+                                                                 can_manage=accounts.can_manage(email), confirmed=confirmed)
+                                if result['added'] or result['duplicates']:
+                                    backend().rebuild(can_manage=accounts.can_manage(email))
+                                    st.success('Индексация завершена.')
+                                else:
+                                    st.warning('Подходящие документы не добавлены.')
+                            st.caption(f"Добавлено: {result['added']} · Дубликатов: {result['duplicates']} · Пропущено: {result['skipped']}")
+                            for error in result['errors']:
+                                st.text(error['file'] + ': ' + error['error'])
+                        except Exception as exc:
+                            st.error(str(exc))
+                            st.caption('Если файлы уже сохранены, повторите переиндексацию после устранения ошибки. Прежний индекс остаётся рабочим.')
+                rebuild_confirm = st.checkbox('Подтверждаю перестроение индекса')
+                if st.button('Переиндексировать', disabled=not rebuild_confirm, width='stretch'):
+                    if DEMO:
+                        st.info('Демонстрация: индекс не изменён.')
+                    else:
+                        try:
+                            with st.spinner('Перестраиваю индекс…'):
+                                backend().rebuild(can_manage=accounts.can_manage(email))
+                            st.success('Индекс обновлён.')
+                        except Exception as exc:
+                            st.error(str(exc))
+        with tabs[-1]:
+            st.subheader('Ваша учётная запись')
+            st.write(user['name'])
+            st.caption(email)
+            st.write(ROLES[user['role']])
+            if DEMO:
+                st.selectbox('Тестовая роль', list(ROLES), format_func=ROLES.get, key='demo_role',
+                             index=list(ROLES).index(user['role']))
+            elif st.button('Выйти', width='stretch'):
+                st.session_state.clear()
+                st.rerun()
+    st.stop()
 
 if st.query_params.get('document'):
     if DEMO:

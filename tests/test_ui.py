@@ -112,6 +112,50 @@ def test_production_requires_login(tmp_path, monkeypatch):
     assert [t.label for t in app.text_input] == ['Корпоративная почта', 'Пароль']
 
 
+def test_settings_is_separate_page_and_returns_to_same_chat(tmp_path, monkeypatch):
+    monkeypatch.setenv('YASTREB_DEMO', '1')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    app = AppTest.from_file(APP).run()
+    original = app.session_state['chat_id']
+    next(b for b in app.button if b.label == '⚙').click().run()
+    assert app.title[0].value == 'Настройки'
+    assert not app.chat_input
+    assert not app.sidebar.tabs
+    assert [t.label for t in app.tabs] == ['Внешний вид', 'Внести изменения', 'Профиль']
+    app.button(key='back_to_chat').click().run()
+    assert app.session_state['chat_id'] == original
+    assert len(app.chat_input) == 1
+    next(b for b in app.button if b.label == '⚙').click().run()
+    app.button(key=original).click().run()
+    assert len(app.chat_input) == 1
+
+
+def test_answer_finishes_while_settings_open(tmp_path, monkeypatch):
+    monkeypatch.setenv('YASTREB_DEMO', '1')
+    monkeypatch.setenv('YASTREB_DATA_DIR', str(tmp_path))
+    started, release = Event(), Event()
+
+    def slow_answer(question, mode):
+        started.set()
+        assert release.wait(15)
+        return {'text': 'Ответ сохранён во время настройки', 'sources': []}
+
+    monkeypatch.setattr(runtime, 'demo_answer', slow_answer)
+    app = AppTest.from_file(APP).run()
+    try:
+        app.chat_input[0].set_value('Вопрос').run()
+        assert started.wait(5)
+        next(b for b in app.button if b.label == '⚙').click().run()
+        assert app.title[0].value == 'Настройки'
+        release.set()
+        finish_demo(app, tmp_path)
+        app.button(key='back_to_chat').click().run()
+        assert app.chat_message[1].markdown[0].value == 'Ответ сохранён во время настройки'
+    finally:
+        release.set()
+        finish_demo(app, tmp_path)
+
+
 def test_worker_opens_word_source_and_returns_to_chat(tmp_path, monkeypatch):
     import hashlib
     from yastreb.accounts import Accounts

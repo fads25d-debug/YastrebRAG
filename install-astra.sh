@@ -27,6 +27,12 @@ fi
 .venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m pip check
+if ! command -v tesseract >/dev/null || ! tesseract --list-langs 2>/dev/null | grep -qx rus || ! tesseract --list-langs 2>/dev/null | grep -qx eng; then
+  echo 'Preparing local PDF OCR. Administrator permission may be requested by sudo.'
+  sudo apt-get update
+  sudo apt-get install -y tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng
+fi
+.venv/bin/python -m scripts.check_ocr
 if [[ ! -x tools/linux/ollama/bin/ollama ]]; then
   curl --fail --location --retry 3 https://github.com/ollama/ollama/releases/download/v0.34.0/ollama-linux-amd64.tar.zst -o downloads/ollama-linux-amd64.tar.zst
   echo 'cf95886728959aa09910bb34de5cca1cc5a8f68003b5597197d3f2c2d57c0804  downloads/ollama-linux-amd64.tar.zst' | sha256sum --check -

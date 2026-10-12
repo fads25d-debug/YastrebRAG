@@ -115,3 +115,16 @@ def test_missing_native_runtime_stops_offline_setup(tmp_path):
     result = run_powershell(command)
     assert result.returncode == 4
     assert 'Visual C++' in result.stdout
+
+
+@pytest.mark.skipif(not shutil.which('powershell.exe'), reason='Windows only')
+def test_missing_ocr_stops_offline_setup(tmp_path):
+    command = (
+        f". '{ROOT / 'scripts/windows-install.ps1'}'; "
+        f". '{ROOT / 'scripts/windows-ocr.ps1'}'; "
+        f"try {{ Install-YastrebOcr '{tmp_path}' -Offline; exit 0 }} "
+        "catch { Write-Output $_.Exception.Message; exit 5 }"
+    )
+    result = run_powershell(command)
+    assert result.returncode == 5
+    assert 'OCR is missing' in result.stdout

@@ -12,6 +12,13 @@ def main():
     root = Path(__file__).resolve().parents[1]
     model_path = Path(os.environ.get('YASTREB_EMBEDDING_PATH', root / 'models' / 'bge-m3'))
     print('Missing packages:', ', '.join(missing) or 'none')
+    from yastreb.ocr import check_available
+    try:
+        check_available()
+        print('PDF OCR: ready (rus/eng)')
+    except ValueError as error:
+        # Text PDFs and Word remain usable when upgrading an older installation.
+        print('PDF OCR: not ready:', error)
     print('Embedding directory:', model_path, 'exists:', model_path.is_dir())
     required = ['config.json', 'modules.json', 'tokenizer_config.json', '1_Pooling/config.json']
     incomplete = [name for name in required if not (model_path / name).is_file()]

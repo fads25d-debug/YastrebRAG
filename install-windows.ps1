@@ -2,6 +2,7 @@ param([switch]$Offline, [switch]$NoLaunch)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 . (Join-Path $PSScriptRoot 'scripts/windows-install.ps1')
+. (Join-Path $PSScriptRoot 'scripts/windows-ocr.ps1')
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $transcript = $false
@@ -43,6 +44,9 @@ try {
         Invoke-Checked $python @('-m', 'pip', 'install', '-r', 'requirements-lock.txt')
     }
     Invoke-Checked $python @('-m', 'pip', 'check')
+    Write-Host 'Preparing offline PDF OCR (Russian and English)...'
+    Install-YastrebOcr $PSScriptRoot -Offline:$Offline
+    Invoke-Checked $python @('-m', 'scripts.check_ocr')
     Write-Host '[3/5] Preparing local Ollama...'
     if (-not (Test-Path -LiteralPath 'tools/ollama/.setup-complete-0.34.0')) {
         if ($Offline) { throw 'Ollama is missing. Run online setup first.' }

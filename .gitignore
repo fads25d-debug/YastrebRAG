@@ -16,3 +16,7 @@ downloads/
 tools/windows/
 tools/ollama-stage-*/
 tools/ollama-backup-*/
+tools/tesseract/
+tools/tesseract-stage-*/
+tools/tesseract-backup-*/
+tools/libreoffice/

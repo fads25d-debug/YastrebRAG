@@ -26,7 +26,7 @@ Windows Python, Windows Ollama, демонстрационные данные и
 
    ```bash
    sudo apt-get update
-   sudo apt-get install ca-certificates curl tar zstd libgomp1
+   sudo apt-get install ca-certificates curl tar zstd libgomp1 tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng
    ```
 
 5. **Без sudo**, под пользователем, который будет запускать приложение:
@@ -56,6 +56,7 @@ Windows Python, Windows Ollama, демонстрационные данные и
 - `cat /etc/astra_version; uname -m; ldd --version` — сведения о системе.
 - `data/logs/ollama.err.log` — журнал запуска модели.
 - `.venv/bin/python -m scripts.check_environment` — проверка компонентов при запущенном Ollama.
+- `.venv/bin/python -m scripts.check_ocr` — автономная проверка распознавания сканов; нужны языки `rus` и `eng`.
 - `.venv/bin/python -m scripts.smoke_rag` — сквозной тест с отдельной синтетической библиотекой.
 - Если порт 11434 занят системным Ollama без перенесённой модели, согласуйте
   остановку этого сервиса с администратором. Скрипт чужие процессы не завершает.

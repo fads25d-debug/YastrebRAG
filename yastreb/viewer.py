@@ -8,7 +8,8 @@ from yastreb.documents import highlighted_text, render_pdf
 
 
 def location_label(source):
-    return ('стр. ' if source.get('format', 'pdf') == 'pdf' else 'абзац ') + str(source['page'])
+    kind = source.get('format', 'pdf')
+    return ('слайд ' if kind in ('ppt', 'pptx') else 'стр. ' if kind == 'pdf' else 'абзац ') + str(source['page'])
 
 
 def clear_document_view():
@@ -32,6 +33,12 @@ def _page_image(raw, number):
     return render_pdf(raw, number)
 
 
+@st.cache_data(show_spinner=False, max_entries=2)
+def _slide_pdf(raw, kind):
+    from yastreb.office import convert_presentation
+    return convert_presentation(raw, '.' + kind, 'pdf')
+
+
 def show_document(backend):
     if st.button('← Вернуться к диалогу', key='close_document'):
         clear_document_view()
@@ -52,8 +59,10 @@ def show_document(backend):
     kind = document['format']
     st.download_button('Скачать оригинал', document['raw'], file_name=Path(document['source']).name,
                        mime={'pdf': 'application/pdf', 'doc': 'application/msword',
+                             'ppt': 'application/vnd.ms-powerpoint',
+                             'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
                              'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}[kind])
-    label = 'Страница' if kind == 'pdf' else 'Абзац'
+    label = 'Слайд' if kind in ('ppt', 'pptx') else 'Страница' if kind == 'pdf' else 'Абзац'
     if st.session_state.get('document_section') not in numbers:
         st.session_state['document_section'] = target
     selected = st.selectbox(label, numbers, key='document_section',
@@ -65,6 +74,9 @@ def show_document(backend):
     before.button('← Предыдущий', disabled=position == 0, on_click=move, args=(-1,))
     after.button('Следующий →', disabled=position == len(numbers) - 1, on_click=move, args=(1,))
     text = dict(document['units'])[selected]
+    for warning in document.get('ocr_warnings', []):
+        if warning['page'] == selected:
+            st.warning(warning['message'])
     quote = st.session_state.get('document_quote', '')
     if selected == target and not (0 <= start < end <= len(text)) and quote and quote in text:
         start = text.index(quote)
@@ -75,11 +87,25 @@ def show_document(backend):
     st.markdown('<div style="white-space:pre-wrap;line-height:1.8;overflow-wrap:anywhere">' + fragment + '</div>',
                 unsafe_allow_html=True)
     if kind == 'pdf':
+        st.caption('Для сканов текст получен распознаванием (OCR) и может содержать ошибки. Сверяйтесь с изображением страницы.')
         st.caption('Оригинальная страница PDF')
         try:
             st.image(_page_image(document['raw'], selected), width='stretch')
         except Exception:
             st.warning('Предпросмотр страницы недоступен. Текст показан выше; оригинал можно скачать.')
+    elif kind in ('ppt', 'pptx'):
+        st.caption('Таблицы: одна строка текста соответствует строке таблицы, столбцы разделены |. '
+                   'Для рисунков показаны только надписи OCR, без анализа изображения.')
+        try:
+            with st.spinner('Подготавливаю изображение слайда…'):
+                preview = _slide_pdf(document['raw'], kind)
+                from pypdf import PdfReader
+                import io
+                if len(PdfReader(io.BytesIO(preview)).pages) != len(numbers):
+                    raise ValueError('Количество слайдов в предпросмотре не совпало с источником. Скачайте оригинал.')
+                st.image(_page_image(preview, selected), width='stretch')
+        except Exception as exc:
+            st.warning(str(exc) if isinstance(exc, ValueError) else 'Предпросмотр слайда недоступен. Скачайте оригинал.')
     else:
         st.caption('Word показан как текст: нумерация относится к абзацам, включая ячейки таблиц, а не к страницам Word.')
         with st.expander('Соседние абзацы'):

@@ -190,12 +190,16 @@ if st.session_state.get('settings_open'):
                     except Exception as exc:
                         st.error(str(exc))
                 folder_mode = st.checkbox('Выбрать папку целиком', key='folder_mode')
-                files = st.file_uploader('Папка с документами' if folder_mode else 'PDF и Word-документы',
-                                         type=['pdf', 'docx', 'doc'],
+                files = st.file_uploader('Папка с документами' if folder_mode else 'PDF, Word и PowerPoint',
+                                         type=['pdf', 'docx', 'doc', 'pptx', 'ppt'],
                                          accept_multiple_files='directory' if folder_mode else True,
                                          key='folder_upload' if folder_mode else 'document_upload')
                 st.caption('Вложенные папки включаются. До 1000 файлов / 500 МиБ за раз; один файл — до 50 МиБ. '
-                           'DOCX читается напрямую, для старых DOC нужен LibreOffice на сервере.')
+                           'DOCX и PPTX читаются напрямую. Для старых DOC/PPT и предпросмотра слайдов нужен LibreOffice на сервере.')
+                st.caption('Презентации: текст слайдов, таблицы и надписи на встроенных рисунках (OCR). '
+                           'Рисунки без текста не интерпретируются. Внешние изображения не скачиваются.')
+                st.caption('Сканы PDF распознаются локально на русском и английском. Большие книги требуют времени; '
+                           'не закрывайте эту страницу до завершения. Распознанный текст сверяйте с оригиналом.')
                 confirmed = st.checkbox('Подтверждаю добавление файлов')
                 if st.button('Добавить и проиндексировать', disabled=not (confirmed and files), width='stretch'):
                     if DEMO:
@@ -203,18 +207,25 @@ if st.session_state.get('settings_open'):
                     else:
                         try:
                             with st.spinner('Извлекаю текст и строю индекс…'):
+                                progress_bar = st.progress(0, text='Подготовка документов…')
+                                def show_progress(stage, current, total):
+                                    progress_bar.progress(current / max(total, 1), text=f'{stage}: {current} из {total}')
                                 if len(files) > 1000 or sum(f.size for f in files) > 500 * 1024 * 1024:
                                     raise ValueError('Превышен лимит: 1000 файлов или 500 МиБ.')
                                 result = backend().ingest_folder([(f.name, f.getvalue()) for f in files],
-                                                                 can_manage=accounts.can_manage(email), confirmed=confirmed)
+                                                                 can_manage=accounts.can_manage(email), confirmed=confirmed,
+                                                                 progress=show_progress)
                                 if result['added'] or result['duplicates']:
-                                    backend().rebuild(can_manage=accounts.can_manage(email))
+                                    backend().rebuild(can_manage=accounts.can_manage(email), progress=show_progress)
                                     st.success('Индексация завершена.')
                                 else:
                                     st.warning('Подходящие документы не добавлены.')
                             st.caption(f"Добавлено: {result['added']} · Дубликатов: {result['duplicates']} · Пропущено: {result['skipped']}")
                             for error in result['errors']:
                                 st.text(error['file'] + ': ' + error['error'])
+                            for warning in result['warnings']:
+                                place = 'слайд' if Path(warning['file']).suffix.lower() in ('.ppt', '.pptx') else 'стр.'
+                                st.warning(f"{warning['file']}, {place} {warning['page']}: {warning['message']}")
                         except Exception as exc:
                             st.error(str(exc))
                             st.caption('Если файлы уже сохранены, повторите переиндексацию после устранения ошибки. Прежний индекс остаётся рабочим.')
@@ -225,7 +236,10 @@ if st.session_state.get('settings_open'):
                     else:
                         try:
                             with st.spinner('Перестраиваю индекс…'):
-                                backend().rebuild(can_manage=accounts.can_manage(email))
+                                progress_bar = st.progress(0, text='Подготовка индекса…')
+                                backend().rebuild(can_manage=accounts.can_manage(email),
+                                    progress=lambda stage, current, total: progress_bar.progress(
+                                        current / max(total, 1), text=f'{stage}: {current} из {total}'))
                             st.success('Индекс обновлён.')
                         except Exception as exc:
                             st.error(str(exc))
@@ -290,6 +304,9 @@ for message in messages:
             st.caption('Источники ответа')
         for i, source in enumerate(message['sources'], 1):
             with st.expander(f"[{i}] {source['source']} · {location_label(source)}"):
+                if source.get('table_header'):
+                    st.caption('Первая строка таблицы (контекст столбцов):')
+                    st.text(source['table_header'])
                 st.text(source['quote'])
                 if not DEMO:
                     digest = backend().resolve_source(source)

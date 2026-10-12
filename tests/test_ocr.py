@@ -159,6 +159,9 @@ def test_compressed_pdf_exceeds_budget_without_partial_import(tmp_path, monkeypa
 def test_content_disguised_as_image_still_consumes_budget(tmp_path, monkeypatch):
     from yastreb import ocr
     monkeypatch.setattr(ocr, 'MAX_DECODED_BYTES', 65_536)
+    # This is a decompression-budget test, not an installed Tesseract test.
+    # The first short-text page requests OCR before later pages exhaust the budget.
+    monkeypatch.setattr(ocr, 'recognize', lambda image: 'Native text')
     backend = Backend(tmp_path / 'library', tmp_path / 'model')
     with pytest.raises(BackendError, match='лимит'):
         backend.ingest([('fake-image.pdf', compressed_pdf(4, 32_768, True))], can_manage=True, confirmed=True)

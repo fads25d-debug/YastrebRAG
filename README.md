@@ -1,6 +1,6 @@
 # Ястреб
 
-Текущая версия: **2.2.0**. Изменения: [CHANGELOG.md](CHANGELOG.md).
+Текущая версия: **2.2.1**. Изменения: [CHANGELOG.md](CHANGELOG.md).
 
 ## Установка на Windows — один запуск
 
@@ -216,7 +216,7 @@ Ollama должен слушать только `127.0.0.1:11434` на серв�
 Исходный релиз не включает большие модели и бинарники. Для публикации исходников:
 
 ```powershell
-git archive --format=zip --output=dist/yastreb-rag-v2.2.0-source.zip v2.2.0
+git archive --format=zip --output=dist/yastreb-rag-v2.2.1-source.zip v2.2.1
 ```
 
 Переносимый комплект Astra создаётся из рабочего каталога скриптом `scripts/export_astra.py`;

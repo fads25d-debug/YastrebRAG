@@ -1,10 +1,10 @@
 name: Publish release
 
 on:
-  push:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
     branches: [main]
-    paths: [pyproject.toml, .github/workflows/release.yml]
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,15 +15,22 @@ concurrency:
 
 jobs:
   publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Create source archive and GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -33,10 +40,11 @@ jobs:
             echo "Release $tag already exists; leaving it unchanged."
             exit 0
           fi
+          python -m scripts.check_release_tag "$RELEASE_SHA" "$tag"
           mkdir -p dist
           mapfile -t paths < <(git ls-tree --name-only HEAD | grep -v '^v[0-9]')
           git archive --format=zip --output="dist/yastreb-rag-$tag-source.zip" HEAD -- "${paths[@]}"
           (cd dist && sha256sum "yastreb-rag-$tag-source.zip" > SHA256SUMS)
           gh release create "$tag" "dist/yastreb-rag-$tag-source.zip" dist/SHA256SUMS \
-            --target "$GITHUB_SHA" --title "Ястреб $tag" \
+            --target "$RELEASE_SHA" --title "Ястреб $tag" \
             --notes-file "docs/releases/$tag.md"
